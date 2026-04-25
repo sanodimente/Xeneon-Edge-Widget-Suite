@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	stdnet "net"
+	"net/http"
 	"os/exec"
 	"regexp"
 	"sort"
@@ -35,6 +38,21 @@ type networkHistory struct {
 	PingMs      []int     `json:"pingMs"`
 }
 
+type publicIPLookupResponse struct {
+	Success bool   `json:"success"`
+	IP      string `json:"ip"`
+	City    string `json:"city"`
+	Region  string `json:"region"`
+	Country string `json:"country"`
+	Message string `json:"message"`
+}
+
+type radioSnapshot struct {
+	Name  string `json:"Name"`
+	Kind  any    `json:"Kind"`
+	State any    `json:"State"`
+}
+
 type networkSnapshot struct {
 	DownloadBps float64        `json:"downloadBps"`
 	UploadBps   float64        `json:"uploadBps"`
@@ -46,6 +64,10 @@ type networkSnapshot struct {
 	SSID        string         `json:"ssid,omitempty"`
 	Error       string         `json:"error,omitempty"`
 	History     networkHistory `json:"history"`
+	PublicIP    string         `json:"publicIp,omitempty"`
+	Location    string         `json:"location,omitempty"`
+	WiFiEnabled bool           `json:"wifiEnabled"`
+	WiFiKnown   bool           `json:"wifiKnown"`
 }
 
 type networkTotals struct {
@@ -85,6 +107,8 @@ func (monitor *networkMonitor) run() {
 
 	monitor.refreshPing()
 	monitor.refreshWiFiSSID()
+	monitor.refreshWiFiRadio()
+	monitor.refreshPublicNetworkInfo()
 
 	previousTotals, err := readNetworkTotals()
 	if err != nil {
@@ -99,6 +123,9 @@ func (monitor *networkMonitor) run() {
 
 	wifiTicker := time.NewTicker(8 * time.Second)
 	defer wifiTicker.Stop()
+
+	publicInfoTicker := time.NewTicker(10 * time.Minute)
+	defer publicInfoTicker.Stop()
 
 	for {
 		select {
@@ -119,6 +146,9 @@ func (monitor *networkMonitor) run() {
 			monitor.refreshPing()
 		case <-wifiTicker.C:
 			monitor.refreshWiFiSSID()
+			monitor.refreshWiFiRadio()
+		case <-publicInfoTicker.C:
+			monitor.refreshPublicNetworkInfo()
 		}
 	}
 }
@@ -197,12 +227,82 @@ func (monitor *networkMonitor) refreshWiFiSSID() {
 	monitor.setWiFiSSID(readWiFiSSID())
 }
 
+func (monitor *networkMonitor) refreshWiFiRadio() {
+	enabled, known, err := readWiFiRadioState()
+	if err != nil {
+		monitor.setWiFiState(false, false)
+		return
+	}
+
+	monitor.setWiFiState(enabled, known)
+}
+
+func (monitor *networkMonitor) refreshPublicNetworkInfo() {
+	publicIP, location, err := readPublicNetworkInfo()
+	if err != nil {
+		return
+	}
+
+	monitor.setPublicNetworkInfo(publicIP, location)
+}
+
 func (monitor *networkMonitor) setWiFiSSID(ssid string) {
 	monitor.mu.Lock()
 	defer monitor.mu.Unlock()
 
 	monitor.current.SSID = ssid
 	monitor.current.UpdatedAt = time.Now().Format(time.RFC3339)
+}
+
+func (monitor *networkMonitor) setWiFiState(enabled, known bool) {
+	monitor.mu.Lock()
+	defer monitor.mu.Unlock()
+
+	monitor.current.WiFiEnabled = enabled
+	monitor.current.WiFiKnown = known
+	monitor.current.UpdatedAt = time.Now().Format(time.RFC3339)
+}
+
+func (monitor *networkMonitor) setPublicNetworkInfo(publicIP, location string) {
+	monitor.mu.Lock()
+	defer monitor.mu.Unlock()
+
+	monitor.current.PublicIP = strings.TrimSpace(publicIP)
+	monitor.current.Location = strings.TrimSpace(location)
+	monitor.current.UpdatedAt = time.Now().Format(time.RFC3339)
+}
+
+func (monitor *networkMonitor) toggleWiFi(ctx context.Context) error {
+	enabled, known, err := readWiFiRadioState()
+	if err != nil {
+		return err
+	}
+	if !known {
+		return errors.New("wi-fi radio not found")
+	}
+
+	targetState := "Off"
+	if !enabled {
+		targetState = "On"
+	}
+
+	if err := setWiFiRadioState(ctx, targetState); err != nil {
+		return err
+	}
+
+	monitor.refreshWiFiRadio()
+	monitor.refreshWiFiSSID()
+
+	go func() {
+		timer := time.NewTimer(2 * time.Second)
+		defer timer.Stop()
+		<-timer.C
+		monitor.refreshWiFiRadio()
+		monitor.refreshWiFiSSID()
+		monitor.refreshPublicNetworkInfo()
+	}()
+
+	return nil
 }
 
 func newNetworkHistory() networkHistory {
@@ -375,4 +475,195 @@ func readWiFiSSID() string {
 	}
 
 	return ""
+}
+
+func readPublicNetworkInfo() (string, string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://ipwho.is/", nil)
+	if err != nil {
+		return "", "", fmt.Errorf("build public ip request: %w", err)
+	}
+
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return "", "", fmt.Errorf("request public ip: %w", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("public ip status %d", response.StatusCode)
+	}
+
+	var payload publicIPLookupResponse
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		return "", "", fmt.Errorf("decode public ip response: %w", err)
+	}
+	if !payload.Success {
+		message := strings.TrimSpace(payload.Message)
+		if message == "" {
+			message = "lookup failed"
+		}
+		return "", "", errors.New(message)
+	}
+
+	location := formatLocation(payload.City, payload.Region, payload.Country)
+	return strings.TrimSpace(payload.IP), location, nil
+}
+
+func formatLocation(city, region, country string) string {
+	parts := make([]string, 0, 2)
+	if trimmedCity := strings.TrimSpace(city); trimmedCity != "" {
+		parts = append(parts, trimmedCity)
+	}
+
+	countryLabel := strings.TrimSpace(country)
+	if countryLabel == "" {
+		countryLabel = strings.TrimSpace(region)
+	}
+	if countryLabel != "" {
+		parts = append(parts, countryLabel)
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return strings.Join(parts, ", ")
+}
+
+func readWiFiRadioState() (bool, bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+
+	output, err := runHiddenPowerShell(ctx, buildWinRTRadioScript(`
+$radiosTask = $asTask.MakeGenericMethod($listType).Invoke($null, @([Windows.Devices.Radios.Radio]::GetRadiosAsync()))
+$radiosTask.Wait()
+@($radiosTask.Result | Select-Object Name, Kind, State) | ConvertTo-Json -Compress
+`))
+	if err != nil {
+		return false, false, err
+	}
+
+	var radios []radioSnapshot
+	if err := json.Unmarshal(output, &radios); err != nil {
+		return false, false, fmt.Errorf("decode radio state: %w", err)
+	}
+
+	for _, radio := range radios {
+		if !isWiFiRadioKind(radio.Kind) {
+			continue
+		}
+
+		return isRadioStateOn(radio.State), true, nil
+	}
+
+	return false, false, nil
+}
+
+func setWiFiRadioState(ctx context.Context, targetState string) error {
+	if targetState != "On" && targetState != "Off" {
+		return fmt.Errorf("unsupported wi-fi target state %q", targetState)
+	}
+
+	toggleCtx := ctx
+	if toggleCtx == nil {
+		toggleCtx = context.Background()
+	}
+
+	_, err := runHiddenPowerShell(toggleCtx, buildWinRTRadioScript(fmt.Sprintf(`
+$accessTask = $asTask.MakeGenericMethod([Windows.Devices.Radios.RadioAccessStatus]).Invoke($null, @([Windows.Devices.Radios.Radio]::RequestAccessAsync()))
+$accessTask.Wait()
+if ($accessTask.Result -ne [Windows.Devices.Radios.RadioAccessStatus]::Allowed) {
+  throw ("Radio access denied: " + $accessTask.Result)
+}
+$radiosTask = $asTask.MakeGenericMethod($listType).Invoke($null, @([Windows.Devices.Radios.Radio]::GetRadiosAsync()))
+$radiosTask.Wait()
+$wifiRadios = @($radiosTask.Result | Where-Object { $_.Kind -eq [Windows.Devices.Radios.RadioKind]::WiFi })
+if ($wifiRadios.Count -eq 0) {
+  throw 'Wi-Fi radio not found'
+}
+$targetState = [Windows.Devices.Radios.RadioState]::%s
+foreach ($radio in $wifiRadios) {
+  $setTask = $asTask.MakeGenericMethod([Windows.Devices.Radios.RadioAccessStatus]).Invoke($null, @($radio.SetStateAsync($targetState)))
+  $setTask.Wait()
+  if ($setTask.Result -ne [Windows.Devices.Radios.RadioAccessStatus]::Allowed) {
+    throw ("Wi-Fi toggle denied: " + $setTask.Result)
+  }
+}
+`, targetState)))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func isWiFiRadioKind(kind any) bool {
+	switch value := kind.(type) {
+	case string:
+		normalized := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(value), "-", ""))
+		return normalized == "wifi"
+	case float64:
+		return int(value) == 1
+	case int:
+		return value == 1
+	default:
+		return false
+	}
+}
+
+func isRadioStateOn(state any) bool {
+	switch value := state.(type) {
+	case string:
+		return strings.EqualFold(strings.TrimSpace(value), "On")
+	case float64:
+		return int(value) == 1
+	case int:
+		return value == 1
+	default:
+		return false
+	}
+}
+
+func buildWinRTRadioScript(body string) string {
+	baseScript := strings.Join([]string{
+		"$ErrorActionPreference='Stop'",
+		"Add-Type -AssemblyName System.Runtime.WindowsRuntime",
+		"[void][Windows.Devices.Radios.Radio, Windows.Devices, ContentType=WindowsRuntime]",
+		"[void][Windows.Devices.Radios.RadioAccessStatus, Windows.Devices, ContentType=WindowsRuntime]",
+		"[void][Windows.Devices.Radios.RadioState, Windows.Devices, ContentType=WindowsRuntime]",
+		"$asTask = [System.WindowsRuntimeSystemExtensions].GetMethods() |",
+		"  Where-Object {",
+		"    $_.Name -eq 'AsTask' -and",
+		"    $_.IsGenericMethodDefinition -and",
+		"    $_.GetGenericArguments().Count -eq 1 -and",
+		"    $_.GetParameters().Count -eq 1 -and",
+		"    $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1'",
+		"  } |",
+		"  Select-Object -First 1",
+		"if (-not $asTask) {",
+		"  throw 'AsTask helper not found'",
+		"}",
+		"$listType = [System.Collections.Generic.IReadOnlyList[Windows.Devices.Radios.Radio]]",
+	}, "\n")
+
+	return strings.TrimSpace(baseScript + "\n" + strings.TrimSpace(body))
+}
+
+func runHiddenPowerShell(ctx context.Context, script string) ([]byte, error) {
+	command := exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script)
+	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+
+	output, err := command.CombinedOutput()
+	if err != nil {
+		trimmed := strings.TrimSpace(string(output))
+		if trimmed == "" {
+			return nil, fmt.Errorf("powershell: %w", err)
+		}
+		return nil, fmt.Errorf("powershell: %s", trimmed)
+	}
+
+	return output, nil
 }

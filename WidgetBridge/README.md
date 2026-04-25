@@ -95,6 +95,7 @@ When the bridge is disabled from the tray, `/health` and `/action/...` return `5
 - `POST /action/shutdown`
 - `POST /action/task-manager`
 - `POST /action/power-settings`
+- `POST /action/wifi-toggle`
 
 Optional body:
 

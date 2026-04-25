@@ -96,14 +96,16 @@ func main() {
 }
 
 func newBridgeApp(addr string) *bridgeApp {
+	network := newNetworkMonitor(getenvDefault("WIDGET_BRIDGE_PING_TARGET", "1.1.1.1"))
+
 	app := &bridgeApp{
 		addr:    addr,
-		actions: buildActionDefinitions(),
+		actions: buildActionDefinitions(network),
 		widgets: []widgetDefinition{
 			{ID: "power-pad", Name: "Power Pad"},
 			{ID: "net-pulse", Name: "Net Pulse"},
 		},
-		network: newNetworkMonitor(getenvDefault("WIDGET_BRIDGE_PING_TARGET", "1.1.1.1")),
+		network: network,
 		enabled: true,
 	}
 
@@ -124,7 +126,7 @@ func newBridgeApp(addr string) *bridgeApp {
 	return app
 }
 
-func buildActionDefinitions() map[string]actionDefinition {
+func buildActionDefinitions(network *networkMonitor) map[string]actionDefinition {
 	return map[string]actionDefinition{
 		"lock": {
 			Message: "Workstation locked",
@@ -160,6 +162,16 @@ func buildActionDefinitions() map[string]actionDefinition {
 			Message: "Power Settings opened",
 			Run: func(ctx context.Context) error {
 				return startDetached(ctx, "cmd.exe", "/c", "start", "", "ms-settings:powersleep")
+			},
+		},
+		"wifi-toggle": {
+			Message: "Wi-Fi toggled",
+			Run: func(ctx context.Context) error {
+				if network == nil {
+					return errors.New("network monitor unavailable")
+				}
+
+				return network.toggleWiFi(ctx)
 			},
 		},
 	}

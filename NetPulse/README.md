@@ -16,6 +16,8 @@
 - live upload throughput
 - ping to the bridge target, default `1.1.1.1`
 - primary network adapter detected by WidgetBridge
+- public IP and approximate location
+- Wi-Fi radio state with an on/off toggle
 
 ## Notes
 
