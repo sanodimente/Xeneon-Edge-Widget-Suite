@@ -1,0 +1,12 @@
+# Go build artifacts
+WidgetBridge/*.exe
+WidgetBridge/*.dll
+WidgetBridge/*.so
+WidgetBridge/*.dylib
+WidgetBridge/*.test
+WidgetBridge/*.out
+
+# Logs and local noise
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en" style="background:#000;">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>Xeneon Power Pad</title>
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #000 !important;
+      color: #f5f5f7;
+      overflow: hidden;
+    }
+
+    body {
+      background-color: #000 !important;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --text: #f5f5f7;
+      --muted: #8e8e96;
+      --border: rgba(255,255,255,.14);
+      --accent: #b6ff3b;
+      --blue: #62a8ff;
+      --warning: #ffcc66;
+      --danger: #ff5c7a;
+    }
+
+    .widget {
+      width: 100vw;
+      height: 100vh;
+      background: #000 !important;
+      color: var(--text);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 24px;
+      gap: 20px;
+    }
+
+    .header {
+      display: grid;
+      gap: 8px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .title {
+      font-size: clamp(34px, 7vw, 82px);
+      line-height: .9;
+      font-weight: 180;
+      letter-spacing: -.065em;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: clamp(13px, 2vw, 21px);
+      font-weight: 500;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .grid {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+    }
+
+    .power-btn {
+      position: relative;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.095), rgba(255,255,255,.035));
+      color: var(--text);
+      border-radius: 34px;
+      padding: 22px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      gap: 12px;
+      min-height: 150px;
+      overflow: hidden;
+      user-select: none;
+      isolation: isolate;
+      transition:
+        transform .14s ease,
+        background .14s ease,
+        border-color .14s ease,
+        box-shadow .14s ease;
+    }
+
+    .power-btn::before {
+      content: "";
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      border-radius: 999px;
+      background: var(--glow);
+      filter: blur(36px);
+      opacity: .18;
+      z-index: -1;
+      transform: translateY(22px);
+      transition: opacity .14s ease, transform .14s ease;
+    }
+
+    .power-btn:hover {
+      background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.055));
+      transform: translateY(-3px);
+      box-shadow: 0 16px 34px rgba(0,0,0,.55);
+    }
+
+    .power-btn:hover::before {
+      opacity: .32;
+      transform: translateY(14px);
+    }
+
+    .power-btn:active {
+      transform: translateY(0) scale(.985);
+    }
+
+    .icon {
+      font-size: clamp(58px, 10vw, 118px);
+      line-height: .9;
+      font-weight: 200;
+      color: var(--color);
+      text-shadow: 0 0 28px color-mix(in oklab, var(--color) 45%, transparent);
+    }
+
+    .icon svg {
+      width: clamp(58px, 10vw, 118px);
+      height: clamp(58px, 10vw, 118px);
+      display: block;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.15;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 14px color-mix(in oklab, currentColor 38%, transparent));
+    }
+
+    .label {
+      font-size: clamp(22px, 3.5vw, 44px);
+      line-height: 1;
+      font-weight: 620;
+      letter-spacing: -.045em;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: clamp(11px, 1.6vw, 16px);
+      font-weight: 500;
+      letter-spacing: .02em;
+    }
+
+    .lock {
+      --color: var(--accent);
+      --glow: rgba(182,255,59,.9);
+      border-color: rgba(182,255,59,.24);
+    }
+
+    .sleep {
+      --color: var(--blue);
+      --glow: rgba(98,168,255,.9);
+      border-color: rgba(98,168,255,.24);
+    }
+
+    .restart {
+      --color: var(--warning);
+      --glow: rgba(255,204,102,.9);
+      border-color: rgba(255,204,102,.28);
+    }
+
+    .shutdown {
+      --color: var(--danger);
+      --glow: rgba(255,92,122,.9);
+      border-color: rgba(255,92,122,.3);
+    }
+
+    .footer {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: clamp(13px, 2vw, 18px);
+      font-weight: 500;
+    }
+
+    .status {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .footer-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .settings-btn {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.075);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 16px 26px;
+      min-height: 58px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: clamp(15px, 2.1vw, 22px);
+      letter-spacing: .02em;
+      white-space: nowrap;
+    }
+
+    .settings-btn:hover {
+      background: rgba(255,255,255,.13);
+    }
+
+    .ok {
+      color: var(--accent);
+    }
+
+    .danger-text {
+      color: var(--danger);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(12px);
+      z-index: 20;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: grid;
+    }
+
+    .modal {
+      width: min(560px, 92vw);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 34px;
+      background: linear-gradient(180deg, rgba(28,28,34,.98), rgba(10,10,12,.98));
+      box-shadow: 0 24px 80px rgba(0,0,0,.7);
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .modal-icon {
+      font-size: 72px;
+      line-height: 1;
+      color: var(--danger);
+    }
+
+    .modal-title {
+      font-size: clamp(28px, 5vw, 48px);
+      line-height: 1;
+      font-weight: 720;
+      letter-spacing: -.045em;
+    }
+
+    .modal-text {
+      color: var(--muted);
+      font-size: clamp(15px, 2.2vw, 20px);
+      line-height: 1.35;
+    }
+
+    .modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .modal-btn {
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px;
+      min-height: 64px;
+      padding: 16px 20px;
+      cursor: pointer;
+      color: var(--text);
+      background: rgba(255,255,255,.08);
+      font-size: clamp(16px, 2.4vw, 22px);
+      font-weight: 760;
+    }
+
+    .modal-btn:hover {
+      background: rgba(255,255,255,.14);
+    }
+
+    .modal-btn.confirm {
+      border-color: rgba(255,92,122,.42);
+      background: linear-gradient(180deg, rgba(255,92,122,.92), rgba(170,28,58,.92));
+      color: white;
+    }
+
+    @supports not (color-mix(in oklab, white 50%, black)) {
+      .icon {
+        text-shadow: none;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .footer {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .settings-btn {
+        width: 100%;
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .widget {
+        padding: 18px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .power-btn {
+        min-height: 118px;
+      }
+    }
+  </style>
+</head>
+
+<body style="margin:0;background:#000;color:#f5f5f7;overflow:hidden;">
+  <main class="widget">
+    <header class="header">
+      <div class="title">Power Pad</div>
+      <div class="subtitle" id="today">Ready</div>
+    </header>
+
+    <section class="grid">
+      <button class="power-btn lock" data-action="run" data-bridge-action="lock">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 64 64" role="presentation" focusable="false">
+            <path d="M20 28V20c0-6.6 5.4-12 12-12s12 5.4 12 12v8" />
+            <rect x="14" y="28" width="36" height="28" rx="8" />
+            <path d="M32 39v8" />
+          </svg>
+        </div>
+        <div class="label">Lock</div>
+      </button>
+
+      <button class="power-btn sleep" data-action="run" data-bridge-action="sleep">
+        <div class="icon">&#x263E;</div>
+        <div class="label">Sleep</div>
+      </button>
+
+      <button class="power-btn restart" data-action="confirm" data-kind="Restart" data-bridge-action="restart">
+        <div class="icon">&#x21BB;</div>
+        <div class="label">Restart</div>
+      </button>
+
+      <button class="power-btn shutdown" data-action="confirm" data-kind="Shut Down" data-bridge-action="shutdown">
+        <div class="icon">&#x23FB;</div>
+        <div class="label">Shut Down</div>
+      </button>
+    </section>
+
+    <footer class="footer">
+      <div class="status" id="status">
+        Ready. Waiting for the local Widget Bridge.
+      </div>
+
+      <div class="footer-actions">
+        <button class="settings-btn" id="taskManager">
+          Task Manager
+        </button>
+
+        <button class="settings-btn" id="powerSettings">
+          Power Settings
+        </button>
+      </div>
+    </footer>
+  </main>
+
+  <section class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-icon" id="modalIcon">&#x23FB;</div>
+      <div class="modal-title" id="modalTitle">Confirm</div>
+      <div class="modal-text" id="modalText">
+        This action is potentially disruptive and will be sent to the local Widget Bridge.
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn" id="cancelBtn">Cancel</button>
+        <button class="modal-btn confirm" id="confirmBtn">Confirm</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    document.documentElement.style.background = "#000";
+    document.body.style.background = "#000";
+
+    const BRIDGE_URL = "http://127.0.0.1:39291";
+    const DEFAULT_STATUS = "Ready. Waiting for the local Widget Bridge.";
+
+    const statusEl = document.getElementById("status");
+    const todayEl = document.getElementById("today");
+    const powerSettings = document.getElementById("powerSettings");
+    const taskManager = document.getElementById("taskManager");
+
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalText = document.getElementById("modalText");
+    const modalIcon = document.getElementById("modalIcon");
+    const cancelBtn = document.getElementById("cancelBtn");
+    const confirmBtn = document.getElementById("confirmBtn");
+
+    let pendingAction = "";
+    let pendingKind = "";
+
+    function updateDate() {
+      const now = new Date();
+      const dateText = now.toLocaleDateString("en-US", {
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+      });
+      const timeText = now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      });
+
+      todayEl.textContent = `${dateText} | ${timeText}`;
+    }
+
+    function setStatus(text, ok = false, danger = false, resetAfterMs = 4000) {
+      statusEl.textContent = text;
+      statusEl.classList.toggle("ok", ok);
+      statusEl.classList.toggle("danger-text", danger);
+
+      clearTimeout(window.__statusTimer);
+      if (resetAfterMs > 0) {
+        window.__statusTimer = setTimeout(() => {
+          statusEl.textContent = DEFAULT_STATUS;
+          statusEl.classList.remove("ok", "danger-text");
+        }, resetAfterMs);
+      }
+    }
+
+    async function callBridge(action, label) {
+      try {
+        const response = await fetch(`${BRIDGE_URL}/action/${action}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            source: "power-pad",
+            label
+          })
+        });
+
+        let payload = {};
+        try {
+          payload = await response.json();
+        } catch {
+          payload = {};
+        }
+
+        if (!response.ok || payload.ok === false) {
+          throw new Error(payload.error || `Bridge request failed with status ${response.status}`);
+        }
+
+        setStatus(payload.message || `${label} sent`, true, false);
+      } catch (error) {
+        setStatus(`${label} failed: ${error.message}`, false, true);
+      }
+    }
+
+    async function checkBridge() {
+      try {
+        const response = await fetch(`${BRIDGE_URL}/health`);
+        if (!response.ok) {
+          throw new Error(`Bridge status ${response.status}`);
+        }
+
+        const payload = await response.json();
+        setStatus(payload.message || "Power Pad bridge connected", true, false, 0);
+      } catch {
+        setStatus("Bridge offline. Start the Go Widget Bridge on Windows.", false, true, 0);
+      }
+    }
+
+    function openConfirm(kind, action) {
+      pendingKind = kind;
+      pendingAction = action;
+
+      modalTitle.textContent = `Confirm ${kind}`;
+      modalIcon.innerHTML = kind === "Restart" ? "&#x21BB;" : "&#x23FB;";
+      confirmBtn.textContent = kind;
+      modalText.textContent =
+        `If you confirm, the ${kind.toLowerCase()} request will be sent to the local Widget Bridge.`;
+
+      modalBackdrop.classList.add("open");
+      modalBackdrop.setAttribute("aria-hidden", "false");
+    }
+
+    function closeConfirm() {
+      modalBackdrop.classList.remove("open");
+      modalBackdrop.setAttribute("aria-hidden", "true");
+      pendingAction = "";
+      pendingKind = "";
+    }
+
+    document.querySelectorAll(".power-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const action = btn.dataset.action;
+        const bridgeAction = btn.dataset.bridgeAction;
+        const label = btn.querySelector(".label").textContent;
+
+        if (action === "confirm") {
+          openConfirm(btn.dataset.kind || label, bridgeAction);
+          return;
+        }
+
+        await callBridge(bridgeAction, label);
+      });
+    });
+
+    cancelBtn.addEventListener("click", closeConfirm);
+
+    confirmBtn.addEventListener("click", async () => {
+      if (pendingAction && pendingKind) {
+        await callBridge(pendingAction, pendingKind);
+      }
+      closeConfirm();
+    });
+
+    modalBackdrop.addEventListener("click", (event) => {
+      if (event.target === modalBackdrop) {
+        closeConfirm();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeConfirm();
+      }
+    });
+
+    taskManager.addEventListener("click", async () => {
+      await callBridge("task-manager", "Task Manager");
+    });
+
+    powerSettings.addEventListener("click", async () => {
+      await callBridge("power-settings", "Power Settings");
+    });
+
+    updateDate();
+    checkBridge();
+    setInterval(updateDate, 60 * 1000);
+    setInterval(checkBridge, 15 * 1000);
+  </script>
+</body>
+</html>
