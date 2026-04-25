@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math"
 	stdnet "net"
 	"os/exec"
 	"regexp"
@@ -19,6 +20,8 @@ import (
 var pingTimePattern = regexp.MustCompile(`(?i)(?:time|tempo)[=<]?\s*(\d+)\s*ms`)
 var wifiSSIDPattern = regexp.MustCompile(`(?mi)^\s*SSID(?:\s+\d+)?\s*:\s*(.+?)\s*$`)
 
+const networkHistoryLimit = 20
+
 type networkStatusResponse struct {
 	OK      bool            `json:"ok"`
 	Message string          `json:"message,omitempty"`
@@ -26,16 +29,23 @@ type networkStatusResponse struct {
 	Metrics networkSnapshot `json:"metrics"`
 }
 
+type networkHistory struct {
+	DownloadBps []float64 `json:"downloadBps"`
+	UploadBps   []float64 `json:"uploadBps"`
+	PingMs      []int     `json:"pingMs"`
+}
+
 type networkSnapshot struct {
-	DownloadBps float64 `json:"downloadBps"`
-	UploadBps   float64 `json:"uploadBps"`
-	PingMs      int     `json:"pingMs"`
-	PingTarget  string  `json:"pingTarget"`
-	Online      bool    `json:"online"`
-	UpdatedAt   string  `json:"updatedAt"`
-	Interface   string  `json:"interface,omitempty"`
-	SSID        string  `json:"ssid,omitempty"`
-	Error       string  `json:"error,omitempty"`
+	DownloadBps float64        `json:"downloadBps"`
+	UploadBps   float64        `json:"uploadBps"`
+	PingMs      int            `json:"pingMs"`
+	PingTarget  string         `json:"pingTarget"`
+	Online      bool           `json:"online"`
+	UpdatedAt   string         `json:"updatedAt"`
+	Interface   string         `json:"interface,omitempty"`
+	SSID        string         `json:"ssid,omitempty"`
+	Error       string         `json:"error,omitempty"`
+	History     networkHistory `json:"history"`
 }
 
 type networkTotals struct {
@@ -60,6 +70,7 @@ func newNetworkMonitor(target string) *networkMonitor {
 		current: networkSnapshot{
 			PingTarget: target,
 			UpdatedAt:  time.Now().Format(time.RFC3339),
+			History:    newNetworkHistory(),
 		},
 		stopCh: make(chan struct{}),
 		doneCh: make(chan struct{}),
@@ -128,7 +139,9 @@ func (monitor *networkMonitor) snapshot() networkSnapshot {
 	monitor.mu.RLock()
 	defer monitor.mu.RUnlock()
 
-	return monitor.current
+	snapshot := monitor.current
+	snapshot.History = cloneNetworkHistory(monitor.current.History)
+	return snapshot
 }
 
 func (monitor *networkMonitor) setThroughput(downloadBps, uploadBps float64, primaryInterface string) {
@@ -139,6 +152,8 @@ func (monitor *networkMonitor) setThroughput(downloadBps, uploadBps float64, pri
 	monitor.current.UploadBps = uploadBps
 	monitor.current.Interface = primaryInterface
 	monitor.current.UpdatedAt = time.Now().Format(time.RFC3339)
+	appendFloatSample(&monitor.current.History.DownloadBps, downloadBps)
+	appendFloatSample(&monitor.current.History.UploadBps, uploadBps)
 	if monitor.current.Error == "" {
 		monitor.current.Online = true
 	}
@@ -154,12 +169,14 @@ func (monitor *networkMonitor) setPing(pingMs int, err error) {
 		monitor.current.PingMs = 0
 		monitor.current.Online = false
 		monitor.current.Error = err.Error()
+		appendIntSample(&monitor.current.History.PingMs, 0)
 		return
 	}
 
 	monitor.current.PingMs = pingMs
 	monitor.current.Online = true
 	monitor.current.Error = ""
+	appendIntSample(&monitor.current.History.PingMs, pingMs)
 }
 
 func (monitor *networkMonitor) setError(err error) {
@@ -186,6 +203,50 @@ func (monitor *networkMonitor) setWiFiSSID(ssid string) {
 
 	monitor.current.SSID = ssid
 	monitor.current.UpdatedAt = time.Now().Format(time.RFC3339)
+}
+
+func newNetworkHistory() networkHistory {
+	return networkHistory{
+		DownloadBps: make([]float64, networkHistoryLimit),
+		UploadBps:   make([]float64, networkHistoryLimit),
+		PingMs:      make([]int, networkHistoryLimit),
+	}
+}
+
+func cloneNetworkHistory(history networkHistory) networkHistory {
+	return networkHistory{
+		DownloadBps: append([]float64(nil), history.DownloadBps...),
+		UploadBps:   append([]float64(nil), history.UploadBps...),
+		PingMs:      append([]int(nil), history.PingMs...),
+	}
+}
+
+func appendFloatSample(series *[]float64, value float64) {
+	sample := 0.0
+	if !math.IsNaN(value) && !math.IsInf(value, 0) && value > 0 {
+		sample = value
+	}
+
+	bucket := append(*series, sample)
+	if len(bucket) > networkHistoryLimit {
+		bucket = bucket[len(bucket)-networkHistoryLimit:]
+	}
+
+	*series = bucket
+}
+
+func appendIntSample(series *[]int, value int) {
+	sample := 0
+	if value > 0 {
+		sample = value
+	}
+
+	bucket := append(*series, sample)
+	if len(bucket) > networkHistoryLimit {
+		bucket = bucket[len(bucket)-networkHistoryLimit:]
+	}
+
+	*series = bucket
 }
 
 func computeBps(current, previous uint64) float64 {
@@ -263,14 +324,19 @@ func isVirtualInterface(name string) bool {
 }
 
 func measurePing(target string) (int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "ping.exe", "-n", "1", "-w", "900", target)
+	cmd := exec.CommandContext(ctx, "ping.exe", "-n", "2", "-w", "1200", target)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	output, err := cmd.CombinedOutput()
 	text := string(output)
-	if match := pingTimePattern.FindStringSubmatch(text); len(match) == 2 {
+	matches := pingTimePattern.FindAllStringSubmatch(text, -1)
+	for _, match := range matches {
+		if len(match) != 2 {
+			continue
+		}
+
 		pingMs, convErr := strconv.Atoi(match[1])
 		if convErr == nil {
 			return pingMs, nil

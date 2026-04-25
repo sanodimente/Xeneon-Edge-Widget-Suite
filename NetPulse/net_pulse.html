@@ -365,10 +365,11 @@
 
     const BRIDGE_URL = "http://127.0.0.1:39291";
     const DEFAULT_STATUS = "Ready. Waiting for the local Widget Bridge.";
+    const HISTORY_LIMIT = 20;
     const history = {
-      download: Array(20).fill(0),
-      upload: Array(20).fill(0),
-      ping: Array(20).fill(0)
+      download: Array(HISTORY_LIMIT).fill(0),
+      upload: Array(HISTORY_LIMIT).fill(0),
+      ping: Array(HISTORY_LIMIT).fill(0)
     };
 
     const subtitleEl = document.getElementById("today");
@@ -447,9 +448,30 @@
       }
 
       bucket.push(Number.isFinite(value) && value > 0 ? value : 0);
-      if (bucket.length > 20) {
+      if (bucket.length > HISTORY_LIMIT) {
         bucket.shift();
       }
+    }
+
+    function normalizeHistorySeries(values) {
+      const normalized = (Array.isArray(values) ? values : [])
+        .slice(-HISTORY_LIMIT)
+        .map((value) => {
+          const numeric = Number(value);
+          return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
+        });
+
+      if (normalized.length >= HISTORY_LIMIT) {
+        return normalized;
+      }
+
+      return Array(HISTORY_LIMIT - normalized.length).fill(0).concat(normalized);
+    }
+
+    function syncHistoryFromBridge(serverHistory = {}) {
+      history.download = normalizeHistorySeries(serverHistory.downloadBps);
+      history.upload = normalizeHistorySeries(serverHistory.uploadBps);
+      history.ping = normalizeHistorySeries(serverHistory.pingMs);
     }
 
     function renderSparkline(key) {
@@ -494,9 +516,14 @@
         ? `Target ${metrics.pingTarget || "1.1.1.1"}`
         : (metrics.error || "Ping unavailable");
 
-      pushHistory("download", Number(metrics.downloadBps || 0));
-      pushHistory("upload", Number(metrics.uploadBps || 0));
-      pushHistory("ping", Number(metrics.pingMs || 0));
+      if (metrics.history) {
+        syncHistoryFromBridge(metrics.history);
+      } else {
+        pushHistory("download", Number(metrics.downloadBps || 0));
+        pushHistory("upload", Number(metrics.uploadBps || 0));
+        pushHistory("ping", Number(metrics.pingMs || 0));
+      }
+
       renderSparkline("download");
       renderSparkline("upload");
       renderSparkline("ping");

@@ -20,5 +20,6 @@
 ## Notes
 
 - The widget talks to the shared local WidgetBridge service.
+- Recent chart history is held in WidgetBridge memory, so it survives widget reloads but resets when WidgetBridge stops.
 - If the bridge is offline, the footer status will show the connection error.
 - You can change the ping target by starting WidgetBridge with `WIDGET_BRIDGE_PING_TARGET`.
