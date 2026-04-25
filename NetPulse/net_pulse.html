@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en" style="background:#000;">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>Xeneon Net Pulse</title>
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #000 !important;
+      color: #f5f5f7;
+      overflow: hidden;
+    }
+
+    body {
+      background-color: #000 !important;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --text: #f5f5f7;
+      --muted: #8e8e96;
+      --border: rgba(255,255,255,.14);
+      --accent: #b6ff3b;
+      --blue: #62a8ff;
+      --warning: #ffcc66;
+      --rose: #ff8cb8;
+      --danger: #ff5c7a;
+      --icon-column: clamp(78px, 11vw, 122px);
+    }
+
+    .widget {
+      width: 100vw;
+      height: 100vh;
+      background: #000 !important;
+      color: var(--text);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 20px 20px 24px;
+      gap: 12px;
+    }
+
+    .header {
+      display: grid;
+      gap: 8px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .title {
+      font-size: clamp(34px, 7vw, 82px);
+      line-height: .9;
+      font-weight: 180;
+      letter-spacing: -.065em;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: clamp(13px, 2vw, 21px);
+      font-weight: 500;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stack {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .metric-card {
+      position: relative;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      border-radius: 0;
+      padding: 8px 0;
+      display: grid;
+      min-height: 0;
+      overflow: visible;
+      user-select: none;
+      isolation: isolate;
+      transition:
+        transform .14s ease,
+        box-shadow .14s ease;
+    }
+
+    .metric-shell {
+      min-width: 0;
+      min-height: 100%;
+      display: grid;
+      grid-template-columns: var(--icon-column) minmax(0, 1fr) minmax(168px, 40%);
+      align-items: center;
+      gap: 14px;
+    }
+
+    .metric-card::before {
+      display: none;
+    }
+
+    .metric-icon {
+      width: var(--icon-column);
+      display: flex;
+      justify-content: center;
+      align-self: center;
+      font-size: clamp(68px, 11vw, 132px);
+      line-height: .9;
+      font-weight: 200;
+      color: var(--color);
+      text-shadow: 0 0 28px color-mix(in oklab, var(--color) 45%, transparent);
+    }
+
+    .metric-copy {
+      min-width: 0;
+      display: grid;
+      gap: 10px;
+      align-content: center;
+    }
+
+    .metric-title {
+      color: var(--muted);
+      font-size: clamp(16px, 2.2vw, 24px);
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: clamp(46px, 7.8vw, 96px);
+      line-height: 1;
+      font-weight: 720;
+      letter-spacing: -.05em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: clamp(14px, 2vw, 19px);
+      font-weight: 500;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .metric-chart {
+	  min-width: 0;
+    height: clamp(88px, 13vw, 136px);
+	  display: grid;
+	  align-items: center;
+	  color: var(--color);
+      opacity: .9;
+      margin-left: -10px;
+    }
+
+    .sparkline {
+	  width: 100%;
+	  height: 100%;
+	  display: block;
+	  overflow: visible;
+    }
+
+    .sparkline-grid {
+	  fill: none;
+	  stroke: color-mix(in oklab, currentColor 18%, transparent);
+	  stroke-width: 1;
+    }
+
+    .sparkline-area {
+	  fill: color-mix(in oklab, currentColor 20%, transparent);
+    }
+
+    .sparkline-line {
+	  fill: none;
+	  stroke: currentColor;
+	  stroke-width: 3.2;
+	  stroke-linecap: round;
+	  stroke-linejoin: round;
+	  filter: drop-shadow(0 0 12px color-mix(in oklab, currentColor 32%, transparent));
+    }
+
+    .download {
+      --color: var(--accent);
+      --glow: rgba(182,255,59,.9);
+      border-color: rgba(182,255,59,.24);
+    }
+
+    .upload {
+      --color: var(--blue);
+      --glow: rgba(98,168,255,.9);
+      border-color: rgba(98,168,255,.24);
+    }
+
+    .ping {
+      --color: var(--warning);
+      --glow: rgba(255,204,102,.9);
+      border-color: rgba(255,204,102,.28);
+    }
+
+    .adapter {
+      --color: var(--rose);
+      --glow: rgba(255,140,184,.9);
+      border-color: rgba(255,140,184,.24);
+    }
+
+    .footer {
+      display: grid;
+      grid-template-columns: 1fr;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: clamp(13px, 2vw, 18px);
+      font-weight: 500;
+    }
+
+    .status {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ok {
+      color: var(--accent);
+    }
+
+    .danger-text {
+      color: var(--danger);
+    }
+
+    @supports not (color-mix(in oklab, white 50%, black)) {
+      .metric-icon {
+        text-shadow: none;
+      }
+
+	  .sparkline-grid,
+	  .sparkline-area,
+	  .sparkline-line {
+		opacity: .9;
+	  }
+    }
+
+    @media (max-width: 720px) {
+      .metric-shell {
+        grid-template-columns: var(--icon-column) minmax(0, 1fr) minmax(140px, 36%);
+      }
+    }
+
+    @media (max-width: 620px) {
+      .widget {
+        padding: 18px;
+      }
+
+	  .header {
+    gap: 8px;
+	  }
+
+      .metric-card {
+		padding: 18px;
+      }
+
+	  .metric-shell {
+    grid-template-columns: var(--icon-column) minmax(0, 1fr);
+		align-items: start;
+	  }
+
+	  .metric-chart {
+		grid-column: 1 / -1;
+		height: 76px;
+        margin-left: 0;
+      }
+    }
+  </style>
+</head>
+
+<body style="margin:0;background:#000;color:#f5f5f7;overflow:hidden;">
+  <main class="widget">
+    <header class="header">
+      <div class="title">Net Pulse</div>
+      <div class="subtitle" id="today">Monitoring network</div>
+    </header>
+
+    <section class="stack">
+      <article class="metric-card download">
+        <div class="metric-shell">
+          <div class="metric-icon" aria-hidden="true">&#x2193;</div>
+          <div class="metric-copy">
+            <div class="metric-title">Download</div>
+            <div class="metric-value" id="downloadValue">--</div>
+            <div class="hint" id="downloadHint">Waiting for bridge sample</div>
+          </div>
+          <div class="metric-chart" aria-hidden="true">
+            <svg class="sparkline" data-chart="download" viewBox="0 0 180 84" preserveAspectRatio="none">
+              <path class="sparkline-grid" d="M0 70H180 M0 46H180 M0 22H180"></path>
+              <path class="sparkline-area"></path>
+              <path class="sparkline-line"></path>
+            </svg>
+          </div>
+        </div>
+      </article>
+
+      <article class="metric-card upload">
+        <div class="metric-shell">
+          <div class="metric-icon" aria-hidden="true">&#x2191;</div>
+          <div class="metric-copy">
+            <div class="metric-title">Upload</div>
+            <div class="metric-value" id="uploadValue">--</div>
+            <div class="hint" id="uploadHint">Waiting for bridge sample</div>
+          </div>
+          <div class="metric-chart" aria-hidden="true">
+            <svg class="sparkline" data-chart="upload" viewBox="0 0 180 84" preserveAspectRatio="none">
+              <path class="sparkline-grid" d="M0 70H180 M0 46H180 M0 22H180"></path>
+              <path class="sparkline-area"></path>
+              <path class="sparkline-line"></path>
+            </svg>
+          </div>
+        </div>
+      </article>
+
+      <article class="metric-card ping">
+        <div class="metric-shell">
+          <div class="metric-icon" aria-hidden="true">&#x25CE;</div>
+          <div class="metric-copy">
+            <div class="metric-title">Ping</div>
+            <div class="metric-value" id="pingValue">--</div>
+            <div class="hint" id="pingHint">Target not measured yet</div>
+          </div>
+          <div class="metric-chart" aria-hidden="true">
+            <svg class="sparkline" data-chart="ping" viewBox="0 0 180 84" preserveAspectRatio="none">
+              <path class="sparkline-grid" d="M0 70H180 M0 46H180 M0 22H180"></path>
+              <path class="sparkline-area"></path>
+              <path class="sparkline-line"></path>
+            </svg>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <div class="status" id="status">Ready. Waiting for the local Widget Bridge.</div>
+    </footer>
+  </main>
+
+  <script>
+    document.documentElement.style.background = "#000";
+    document.body.style.background = "#000";
+
+    const BRIDGE_URL = "http://127.0.0.1:39291";
+    const DEFAULT_STATUS = "Ready. Waiting for the local Widget Bridge.";
+    const history = {
+      download: Array(20).fill(0),
+      upload: Array(20).fill(0),
+      ping: Array(20).fill(0)
+    };
+
+    const subtitleEl = document.getElementById("today");
+    const statusEl = document.getElementById("status");
+
+    const downloadValue = document.getElementById("downloadValue");
+    const uploadValue = document.getElementById("uploadValue");
+    const pingValue = document.getElementById("pingValue");
+
+    const downloadHint = document.getElementById("downloadHint");
+    const uploadHint = document.getElementById("uploadHint");
+    const pingHint = document.getElementById("pingHint");
+    const charts = {
+      download: document.querySelector('[data-chart="download"]'),
+      upload: document.querySelector('[data-chart="upload"]'),
+      ping: document.querySelector('[data-chart="ping"]')
+    };
+
+    function updateSubtitle(metrics = {}) {
+      const adapter = truncate(metrics.interface || "No adapter", 18);
+      const wifi = metrics.ssid ? truncate(metrics.ssid, 20) : "Wi-Fi not connected";
+      subtitleEl.textContent = `${adapter} | ${wifi}`;
+    }
+
+    function setStatus(text, ok = false, danger = false, resetAfterMs = 0) {
+      statusEl.textContent = text;
+      statusEl.classList.toggle("ok", ok);
+      statusEl.classList.toggle("danger-text", danger);
+
+      clearTimeout(window.__statusTimer);
+      if (resetAfterMs > 0) {
+        window.__statusTimer = setTimeout(() => {
+          statusEl.textContent = DEFAULT_STATUS;
+          statusEl.classList.remove("ok", "danger-text");
+        }, resetAfterMs);
+      }
+    }
+
+    function formatRate(bytesPerSecond) {
+      const bitsPerSecond = Number(bytesPerSecond || 0) * 8;
+      if (!Number.isFinite(bitsPerSecond) || bitsPerSecond <= 0) {
+        return "0 Mbps";
+      }
+
+      const units = [
+        { limit: 1e9, suffix: "Gbps" },
+        { limit: 1e6, suffix: "Mbps" },
+        { limit: 1e3, suffix: "Kbps" }
+      ];
+
+      for (const unit of units) {
+        if (bitsPerSecond >= unit.limit) {
+          const value = bitsPerSecond / unit.limit;
+          return `${value >= 100 ? value.toFixed(0) : value.toFixed(1)} ${unit.suffix}`;
+        }
+      }
+
+      return `${Math.round(bitsPerSecond)} bps`;
+    }
+
+    function truncate(text, maxLength = 12) {
+      const value = String(text || "").trim();
+      if (!value) {
+        return "Unknown";
+      }
+      if (value.length <= maxLength) {
+        return value;
+      }
+      return `${value.slice(0, maxLength - 1)}...`;
+    }
+
+    function pushHistory(key, value) {
+      const bucket = history[key];
+      if (!bucket) {
+        return;
+      }
+
+      bucket.push(Number.isFinite(value) && value > 0 ? value : 0);
+      if (bucket.length > 20) {
+        bucket.shift();
+      }
+    }
+
+    function renderSparkline(key) {
+      const svg = charts[key];
+      const values = history[key];
+      if (!svg || !values || !values.length) {
+        return;
+      }
+
+      const width = 180;
+      const height = 84;
+      const topPadding = 8;
+      const bottomPadding = 10;
+      const usableHeight = height - topPadding - bottomPadding;
+      const maxValue = Math.max(...values, 1);
+
+      const points = values.map((value, index) => {
+        const x = values.length === 1 ? width / 2 : (index * width) / (values.length - 1);
+        const ratio = value / maxValue;
+        const y = height - bottomPadding - ratio * usableHeight;
+        return [Number(x.toFixed(2)), Number(y.toFixed(2))];
+      });
+
+      const linePath = points
+        .map(([x, y], index) => `${index === 0 ? "M" : "L"}${x} ${y}`)
+        .join(" ");
+      const areaPath = `${linePath} L ${width} ${height} L 0 ${height} Z`;
+
+      svg.querySelector(".sparkline-line").setAttribute("d", linePath);
+      svg.querySelector(".sparkline-area").setAttribute("d", areaPath);
+    }
+
+    function updateMetrics(metrics) {
+      downloadValue.textContent = formatRate(metrics.downloadBps);
+      uploadValue.textContent = formatRate(metrics.uploadBps);
+      pingValue.textContent = metrics.pingMs > 0 ? `${metrics.pingMs} ms` : "--";
+      updateSubtitle(metrics);
+
+      downloadHint.textContent = "Live downstream throughput";
+      uploadHint.textContent = "Live upstream throughput";
+      pingHint.textContent = metrics.online
+        ? `Target ${metrics.pingTarget || "1.1.1.1"}`
+        : (metrics.error || "Ping unavailable");
+
+      pushHistory("download", Number(metrics.downloadBps || 0));
+      pushHistory("upload", Number(metrics.uploadBps || 0));
+      pushHistory("ping", Number(metrics.pingMs || 0));
+      renderSparkline("download");
+      renderSparkline("upload");
+      renderSparkline("ping");
+    }
+
+    function clearMetrics() {
+      downloadValue.textContent = "--";
+      uploadValue.textContent = "--";
+      pingValue.textContent = "--";
+      updateSubtitle({});
+      downloadHint.textContent = "Bridge unavailable";
+      uploadHint.textContent = "Bridge unavailable";
+      pingHint.textContent = "Bridge unavailable";
+
+      pushHistory("download", 0);
+      pushHistory("upload", 0);
+      pushHistory("ping", 0);
+      renderSparkline("download");
+      renderSparkline("upload");
+      renderSparkline("ping");
+    }
+
+    async function refreshNetwork(showSuccess = false) {
+      try {
+        const response = await fetch(`${BRIDGE_URL}/network/status`);
+        let payload = {};
+        try {
+          payload = await response.json();
+        } catch {
+          payload = {};
+        }
+
+        if (!response.ok || payload.ok === false) {
+          throw new Error(payload.error || `Bridge request failed with status ${response.status}`);
+        }
+
+        updateMetrics(payload.metrics || {});
+        setStatus(
+          showSuccess ? (payload.message || "Network metrics refreshed") : "Net Pulse bridge connected",
+          true,
+          false,
+          showSuccess ? 2500 : 0
+        );
+      } catch (error) {
+        clearMetrics();
+        setStatus(`Network monitor offline: ${error.message}`, false, true, 0);
+      }
+    }
+
+    updateSubtitle({});
+    refreshNetwork(false);
+    setInterval(() => refreshNetwork(false), 2000);
+  </script>
+</body>
+</html>

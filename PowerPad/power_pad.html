@@ -192,19 +192,21 @@
 
     .footer {
       display: grid;
-      grid-template-columns: 1fr auto;
-      align-items: center;
-      gap: 12px;
+      grid-template-columns: 1fr;
+      justify-items: end;
+      gap: 10px;
       color: var(--muted);
       font-size: clamp(13px, 2vw, 18px);
       font-weight: 500;
     }
 
     .status {
+      width: 100%;
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      text-align: left;
     }
 
     .footer-actions {
@@ -389,10 +391,6 @@
     </section>
 
     <footer class="footer">
-      <div class="status" id="status">
-        Ready. Waiting for the local Widget Bridge.
-      </div>
-
       <div class="footer-actions">
         <button class="settings-btn" id="taskManager">
           Task Manager
@@ -401,6 +399,10 @@
         <button class="settings-btn" id="powerSettings">
           Power Settings
         </button>
+      </div>
+
+      <div class="status" id="status">
+        Ready. Waiting for the local Widget Bridge.
       </div>
     </footer>
   </main>
