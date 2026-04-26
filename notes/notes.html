@@ -1,0 +1,1022 @@
+<!doctype html>
+<html lang="en" style="background:#000;">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>Xeneon Notes</title>
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #000 !important;
+      color: #f5f5f7;
+      overflow: hidden;
+    }
+
+    body {
+      background-color: #000 !important;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --text: #f5f5f7;
+      --muted: #8e8e96;
+      --border: rgba(255,255,255,.14);
+      --accent: #b6ff3b;
+      --danger: #ff5c7a;
+    }
+
+    .widget {
+      width: 100vw;
+      height: 100vh;
+      background: #000 !important;
+      color: var(--text);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 28px;
+      gap: 22px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .tabs {
+      display: inline-grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255,255,255,.04);
+      width: min(100%, 460px);
+    }
+
+    .tab-btn {
+      border: 0;
+      border-radius: 999px;
+      min-height: 66px;
+      background: transparent;
+      color: var(--muted);
+      font-size: clamp(20px, 2.6vw, 24px);
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .14s ease, color .14s ease, transform .14s ease;
+    }
+
+    .tab-btn.is-active {
+      background: rgba(255,255,255,.1);
+      color: var(--text);
+    }
+
+    .tab-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .surface {
+      min-height: 0;
+      position: relative;
+    }
+
+    .panel {
+      position: absolute;
+      inset: 0;
+      display: none;
+      min-height: 0;
+    }
+
+    .panel.is-active {
+      display: block;
+    }
+
+    .text-list {
+      height: 100%;
+      margin: 0;
+      overflow: auto;
+      padding: 0 8px 0 42px;
+    }
+
+    .text-list::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .text-list::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,.12);
+      border-radius: 999px;
+    }
+
+    .text-list.is-empty {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .notes-list {
+      list-style: disc;
+    }
+
+    .notes-list li {
+      margin: 0 0 24px;
+      color: rgba(245,245,247,.92);
+    }
+
+    .notes-list li::marker {
+      color: rgba(255,255,255,.5);
+      font-size: 1.1em;
+    }
+
+    .todo-list {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .todo-list li {
+      margin: 0 0 24px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .todo-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .entry-text {
+      font-size: clamp(26px, 3vw, 32px);
+      line-height: 1.28;
+      font-weight: 560;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .entry-editable {
+      cursor: text;
+    }
+
+    .entry-editor {
+      width: 100%;
+      min-height: 88px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 22px;
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 18px 20px;
+      font: inherit;
+      font-size: clamp(26px, 3vw, 32px);
+      line-height: 1.28;
+      font-weight: 560;
+      resize: none;
+      outline: none;
+      overflow: hidden;
+    }
+
+    .entry-editor::placeholder {
+      color: rgba(255,255,255,.28);
+    }
+
+    .todo-row.is-done .entry-text {
+      color: rgba(245,245,247,.42);
+      text-decoration: line-through;
+    }
+
+    .ghost-btn,
+    .command-btn {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      cursor: pointer;
+      transition: transform .14s ease, background .14s ease, border-color .14s ease, color .14s ease;
+      font: inherit;
+    }
+
+    .ghost-btn:hover,
+    .command-btn:hover {
+      transform: translateY(-2px);
+      background: rgba(255,255,255,.11);
+    }
+
+    .ghost-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 999px;
+      font-size: 24px;
+      font-weight: 700;
+      flex: 0 0 auto;
+    }
+
+    .ghost-btn.check {
+      color: var(--accent);
+      border-color: rgba(182,255,59,.24);
+    }
+
+    .ghost-btn.delete {
+      color: var(--danger);
+      border-color: rgba(255,92,122,.2);
+    }
+
+    .row-actions {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+
+    .empty {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed rgba(255,255,255,.12);
+      border-radius: 28px;
+      font-size: clamp(24px, 2.8vw, 32px);
+      line-height: 1.3;
+      padding: 24px;
+    }
+
+    .footer {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .status {
+      min-width: 0;
+      color: var(--muted);
+      font-size: clamp(18px, 2.2vw, 22px);
+      font-weight: 560;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .commands {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .command-btn {
+      min-height: 60px;
+      padding: 0 20px;
+      border-radius: 999px;
+      font-size: clamp(18px, 2.1vw, 22px);
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    .command-btn.primary {
+      color: var(--accent);
+      border-color: rgba(182,255,59,.24);
+      background: rgba(182,255,59,.1);
+    }
+
+    .command-btn.clear {
+      color: var(--danger);
+      border-color: rgba(255,92,122,.2);
+    }
+
+    .dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(12px);
+      z-index: 30;
+    }
+
+    .dialog-backdrop.is-open {
+      display: flex;
+    }
+
+    .dialog {
+      width: min(100%, 860px);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 34px;
+      background: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.04));
+      box-shadow: 0 28px 60px rgba(0,0,0,.5);
+      padding: 28px;
+      display: grid;
+      gap: 22px;
+    }
+
+    .dialog-title {
+      font-size: clamp(34px, 4vw, 48px);
+      line-height: .98;
+      font-weight: 620;
+      letter-spacing: -.04em;
+      color: var(--text);
+    }
+
+    .dialog-body {
+      color: rgba(245,245,247,.78);
+      font-size: clamp(22px, 2.8vw, 30px);
+      line-height: 1.35;
+      white-space: pre-wrap;
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .dialog-btn {
+      min-height: 64px;
+      padding: 0 22px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+      font-size: clamp(18px, 2.1vw, 22px);
+      font-weight: 700;
+      letter-spacing: .02em;
+      transition: transform .14s ease, background .14s ease, border-color .14s ease;
+    }
+
+    .dialog-btn:hover {
+      transform: translateY(-2px);
+      background: rgba(255,255,255,.11);
+    }
+
+    .dialog-btn.primary {
+      color: var(--accent);
+      border-color: rgba(182,255,59,.24);
+      background: rgba(182,255,59,.1);
+    }
+
+    .dialog-btn.danger {
+      color: var(--danger);
+      border-color: rgba(255,92,122,.2);
+    }
+
+    @media (max-width: 820px) {
+      .widget {
+        padding: 20px;
+        gap: 18px;
+      }
+
+      .tabs {
+        width: 100%;
+      }
+
+      .footer {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+
+      .commands {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .widget {
+        padding: 16px;
+      }
+
+      .entry-text {
+        font-size: clamp(24px, 7vw, 30px);
+      }
+
+      .entry-editor {
+        font-size: clamp(24px, 7vw, 30px);
+      }
+
+      .ghost-btn {
+        width: 52px;
+        height: 52px;
+      }
+
+      .command-btn {
+        width: 100%;
+      }
+
+      .dialog {
+        padding: 22px;
+      }
+
+      .dialog-actions {
+        justify-content: stretch;
+      }
+
+      .dialog-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="widget">
+    <div class="topbar">
+      <div class="tabs" role="tablist" aria-label="Notes pages">
+        <button class="tab-btn is-active" id="notesTab" type="button" data-view="notes" role="tab" aria-selected="true">Notes</button>
+        <button class="tab-btn" id="todoTab" type="button" data-view="todo" role="tab" aria-selected="false">Todo</button>
+      </div>
+    </div>
+
+    <section class="surface">
+      <div class="panel is-active" id="notesPanel" data-panel="notes">
+        <ul class="text-list notes-list" id="notesList"></ul>
+      </div>
+
+      <div class="panel" id="todoPanel" data-panel="todo">
+        <ul class="text-list todo-list" id="todoList"></ul>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="status" id="status">2 notes ready.</div>
+      <div class="commands">
+        <button class="command-btn primary" id="addBtn" type="button">Add note</button>
+        <button class="command-btn clear" id="clearBtn" type="button">Clear notes</button>
+      </div>
+    </footer>
+  </main>
+
+  <div class="dialog-backdrop" id="dialogBackdrop" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+      <div class="dialog-title" id="dialogTitle">Confirm action</div>
+      <div class="dialog-body" id="dialogBody"></div>
+      <div class="dialog-actions">
+        <button class="dialog-btn" id="dialogCancelBtn" type="button">Cancel</button>
+        <button class="dialog-btn primary" id="dialogConfirmBtn" type="button">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "xeneon.notes.widget.state";
+    const DEFAULT_NOTES = [
+      {
+        id: crypto.randomUUID(),
+        text: "Move meeting recap into wiki - summarize key blockers and attach the three screenshots.",
+        createdAt: Date.now() - 120000
+      },
+      {
+        id: crypto.randomUUID(),
+        text: "Draft a one-line weekly update.",
+        createdAt: Date.now() - 60000
+      }
+    ];
+    const DEFAULT_TODOS = [
+      {
+        id: crypto.randomUUID(),
+        text: "Send bridge build to desktop.",
+        done: false,
+        createdAt: Date.now() - 90000
+      },
+      {
+        id: crypto.randomUUID(),
+        text: "Review widget padding on mobile.",
+        done: true,
+        createdAt: Date.now() - 30000
+      }
+    ];
+    const DEFAULT_STATUS_TEXT = "Local notes stored in this widget.";
+
+    const notesTab = document.getElementById("notesTab");
+    const todoTab = document.getElementById("todoTab");
+    const notesPanel = document.getElementById("notesPanel");
+    const todoPanel = document.getElementById("todoPanel");
+    const notesList = document.getElementById("notesList");
+    const todoList = document.getElementById("todoList");
+    const statusEl = document.getElementById("status");
+    const addBtn = document.getElementById("addBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const dialogBackdrop = document.getElementById("dialogBackdrop");
+    const dialogTitle = document.getElementById("dialogTitle");
+    const dialogBody = document.getElementById("dialogBody");
+    const dialogCancelBtn = document.getElementById("dialogCancelBtn");
+    const dialogConfirmBtn = document.getElementById("dialogConfirmBtn");
+
+    let state = loadState();
+    let editing = null;
+    let dialogState = null;
+
+    function normalizeNote(note) {
+      const title = String(note?.title || note?.text || "").trim();
+      const body = String(note?.body || "").trim();
+      const text = title && body && !body.startsWith("Quick note captured") && !body.startsWith("Short reminder saved")
+        ? `${title} - ${body}`
+        : (title || body || "Untitled note");
+
+      return {
+        id: String(note?.id || crypto.randomUUID()),
+        text,
+        createdAt: Number(note?.createdAt || Date.now())
+      };
+    }
+
+    function normalizeTodo(todo) {
+      return {
+        id: String(todo?.id || crypto.randomUUID()),
+        text: String(todo?.text || todo?.title || "Untitled task").trim() || "Untitled task",
+        done: Boolean(todo?.done),
+        createdAt: Number(todo?.createdAt || Date.now())
+      };
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            view: parsed.view === "todo" ? "todo" : "notes",
+            notes: Array.isArray(parsed.notes) ? parsed.notes.map(normalizeNote) : structuredClone(DEFAULT_NOTES),
+            todos: Array.isArray(parsed.todos) ? parsed.todos.map(normalizeTodo) : structuredClone(DEFAULT_TODOS)
+          };
+        }
+      } catch {
+      }
+
+      return {
+        view: "notes",
+        notes: structuredClone(DEFAULT_NOTES),
+        todos: structuredClone(DEFAULT_TODOS)
+      };
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function setStatus(message, reset = true) {
+      statusEl.textContent = message;
+      clearTimeout(window.__notesStatusTimer);
+      if (reset) {
+        window.__notesStatusTimer = setTimeout(() => {
+          renderStatus();
+        }, 2200);
+      }
+    }
+
+    function closeDialog() {
+      dialogState = null;
+      dialogBackdrop.classList.remove("is-open");
+      dialogBackdrop.setAttribute("aria-hidden", "true");
+    }
+
+    function openDialog(config) {
+      dialogState = { ...config };
+      dialogTitle.textContent = config.title;
+      dialogBody.textContent = config.body;
+      dialogCancelBtn.textContent = config.cancelLabel || "Cancel";
+      dialogConfirmBtn.textContent = config.confirmLabel || "Confirm";
+      dialogConfirmBtn.classList.toggle("danger", Boolean(config.isDanger));
+      dialogConfirmBtn.classList.toggle("primary", !config.isDanger);
+
+      dialogBackdrop.classList.add("is-open");
+      dialogBackdrop.setAttribute("aria-hidden", "false");
+
+      requestAnimationFrame(() => {
+        dialogConfirmBtn.focus();
+      });
+    }
+
+    function focusActiveEditor() {
+      if (!editing) {
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        const editor = document.querySelector(`[data-editor-type="${editing.type}"][data-editor-id="${editing.id}"]`);
+        if (!editor) {
+          return;
+        }
+
+        editor.focus();
+        const end = editor.value.length;
+        editor.setSelectionRange(end, end);
+      });
+    }
+
+    function startEditing(type, id, isNew = false) {
+      if (editing?.type === type && editing?.id === id) {
+        focusActiveEditor();
+        return;
+      }
+
+      if (editing) {
+        commitEditing();
+      }
+
+      if (isNew) {
+        editing = {
+          type,
+          id: `draft-${Date.now()}`,
+          draft: "",
+          isNew: true
+        };
+        render();
+        return;
+      }
+
+      const bucket = type === "notes" ? state.notes : state.todos;
+      const item = bucket.find((entry) => entry.id === id);
+      if (!item) {
+        return;
+      }
+
+      editing = {
+        type,
+        id,
+        draft: item.text,
+        isNew: false
+      };
+      render();
+    }
+
+    function cancelEditing(message = "Edit cancelled.") {
+      if (!editing) {
+        return;
+      }
+
+      editing = null;
+      render();
+      setStatus(message);
+    }
+
+    function commitEditing() {
+      if (!editing) {
+        return true;
+      }
+
+      const draft = String(editing.draft || "").trim();
+      const isNotes = editing.type === "notes";
+      const itemLabel = isNotes ? "note" : "task";
+
+      if (!draft) {
+        if (editing.isNew) {
+          editing = null;
+          render();
+          setStatus(`No ${itemLabel} added.`);
+          return false;
+        }
+
+        editing = null;
+        render();
+        setStatus(`Empty ${itemLabel} discarded.`);
+        return false;
+      }
+
+      if (editing.isNew) {
+        if (isNotes) {
+          state.notes.unshift({
+            id: crypto.randomUUID(),
+            text: draft,
+            createdAt: Date.now()
+          });
+        } else {
+          state.todos.unshift({
+            id: crypto.randomUUID(),
+            text: draft,
+            done: false,
+            createdAt: Date.now()
+          });
+        }
+      } else {
+        const bucket = isNotes ? state.notes : state.todos;
+        const item = bucket.find((entry) => entry.id === editing.id);
+        if (item) {
+          item.text = draft;
+        }
+      }
+
+      editing = null;
+      render();
+      setStatus(`${isNotes ? "Note" : "Task"} saved.`);
+      return true;
+    }
+
+    function renderTabs() {
+      const isNotes = state.view === "notes";
+      notesTab.classList.toggle("is-active", isNotes);
+      todoTab.classList.toggle("is-active", !isNotes);
+      notesTab.setAttribute("aria-selected", String(isNotes));
+      todoTab.setAttribute("aria-selected", String(!isNotes));
+      notesPanel.classList.toggle("is-active", isNotes);
+      todoPanel.classList.toggle("is-active", !isNotes);
+    }
+
+    function getSortedNotes() {
+      return [...state.notes].sort((left, right) => right.createdAt - left.createdAt);
+    }
+
+    function getSortedTodos() {
+      return [...state.todos].sort((left, right) => {
+        if (left.done !== right.done) {
+          return left.done ? 1 : -1;
+        }
+        return right.createdAt - left.createdAt;
+      });
+    }
+
+    function renderNotes() {
+      const sortedNotes = getSortedNotes();
+      const notesToRender = editing?.type === "notes" && editing.isNew
+        ? [{ id: editing.id, text: "", starred: false, isDraft: true }, ...sortedNotes]
+        : sortedNotes;
+
+      notesList.classList.toggle("is-empty", notesToRender.length === 0);
+
+      if (!notesToRender.length) {
+        notesList.innerHTML = '<li class="empty">No notes yet. Use Add note to create one.</li>';
+        return;
+      }
+
+      notesList.innerHTML = notesToRender.map((note) => `
+        <li class="note-row">
+          <div class="row">
+            ${editing?.type === "notes" && editing?.id === note.id
+              ? `<textarea class="entry-editor" data-editor-type="notes" data-editor-id="${note.id}" rows="2" placeholder="Write note...">${escapeHtml(editing.draft)}</textarea>`
+              : `<div class="entry-text entry-editable" data-note-edit="${note.id}">${escapeHtml(note.text)}</div>`}
+            <div class="row-actions">
+              <button class="ghost-btn delete" type="button" data-note-delete="${note.id}" title="Delete note">×</button>
+            </div>
+          </div>
+        </li>
+      `).join("");
+    }
+
+    function renderTodos() {
+      const sortedTodos = getSortedTodos();
+      const todosToRender = editing?.type === "todo" && editing.isNew
+        ? [{ id: editing.id, text: "", done: false, isDraft: true }, ...sortedTodos]
+        : sortedTodos;
+
+      todoList.classList.toggle("is-empty", todosToRender.length === 0);
+
+      if (!todosToRender.length) {
+        todoList.innerHTML = '<li class="empty">No tasks yet. Use Add task to create one.</li>';
+        return;
+      }
+
+      todoList.innerHTML = todosToRender.map((todo) => `
+        <li>
+          <div class="todo-row ${todo.done ? "is-done" : ""}">
+            <button class="ghost-btn check" type="button" data-todo-toggle="${todo.id}" title="Toggle task">${todo.done ? "✓" : "○"}</button>
+            ${editing?.type === "todo" && editing?.id === todo.id
+              ? `<textarea class="entry-editor" data-editor-type="todo" data-editor-id="${todo.id}" rows="2" placeholder="Write task...">${escapeHtml(editing.draft)}</textarea>`
+              : `<div class="entry-text entry-editable" data-todo-edit="${todo.id}">${escapeHtml(todo.text)}</div>`}
+            <div class="row-actions">
+              <button class="ghost-btn delete" type="button" data-todo-delete="${todo.id}" title="Delete task">×</button>
+            </div>
+          </div>
+        </li>
+      `).join("");
+    }
+
+    function renderStatus() {
+      if (state.view === "notes") {
+        statusEl.textContent = `${state.notes.length} notes. ${DEFAULT_STATUS_TEXT}`;
+        return;
+      }
+
+      const openTodos = state.todos.filter((todo) => !todo.done).length;
+      statusEl.textContent = `${openTodos} open tasks out of ${state.todos.length}. ${DEFAULT_STATUS_TEXT}`;
+    }
+
+    function renderCommands() {
+      const isNotes = state.view === "notes";
+      addBtn.textContent = isNotes ? "Add note" : "Add task";
+      clearBtn.textContent = isNotes ? "Clear notes" : "Clear todo";
+    }
+
+    function render() {
+      renderTabs();
+      renderNotes();
+      renderTodos();
+      renderCommands();
+      renderStatus();
+      saveState();
+      focusActiveEditor();
+    }
+
+    function switchView(view) {
+      if (editing) {
+        commitEditing();
+      }
+      state.view = view === "todo" ? "todo" : "notes";
+      render();
+    }
+
+    function addCurrentItem() {
+      const isNotes = state.view === "notes";
+      startEditing(isNotes ? "notes" : "todo", null, true);
+      setStatus(isNotes ? "Write the new note inline." : "Write the new task inline.", false);
+    }
+
+    function clearCurrentView() {
+      if (editing) {
+        cancelEditing("Edit cancelled.");
+      }
+
+      const isNotes = state.view === "notes";
+      const target = isNotes ? "notes" : "todo";
+      openDialog({
+        title: isNotes ? "Clear notes?" : "Clear todo?",
+        body: isNotes
+          ? "This will remove every note currently visible in the widget."
+          : "This will remove every task currently visible in the widget.",
+        cancelLabel: "Keep",
+        confirmLabel: isNotes ? "Clear notes" : "Clear todo",
+        isDanger: true,
+        onConfirm: () => {
+          if (isNotes) {
+            state.notes = [];
+          } else {
+            state.todos = [];
+          }
+
+          closeDialog();
+          render();
+          setStatus(`${isNotes ? "Notes" : "Todo"} cleared.`);
+        }
+      });
+    }
+
+    notesTab.addEventListener("click", () => switchView("notes"));
+    todoTab.addEventListener("click", () => switchView("todo"));
+    addBtn.addEventListener("click", addCurrentItem);
+    clearBtn.addEventListener("click", clearCurrentView);
+    dialogCancelBtn.addEventListener("click", closeDialog);
+    dialogConfirmBtn.addEventListener("click", async () => {
+      if (!dialogState?.onConfirm) {
+        closeDialog();
+        return;
+      }
+
+      await dialogState.onConfirm();
+    });
+    dialogBackdrop.addEventListener("click", (event) => {
+      if (event.target === dialogBackdrop) {
+        closeDialog();
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && dialogState) {
+        closeDialog();
+      }
+    });
+
+    notesList.addEventListener("click", (event) => {
+      const deleteButton = event.target.closest("[data-note-delete]");
+      const editTarget = event.target.closest("[data-note-edit]");
+      if (!deleteButton) {
+        if (editTarget) {
+          startEditing("notes", editTarget.dataset.noteEdit);
+        }
+        return;
+      }
+
+      if (deleteButton) {
+        if (editing) {
+          commitEditing();
+        }
+
+        const noteId = deleteButton.dataset.noteDelete;
+        const nextNotes = state.notes.filter((item) => item.id !== noteId);
+        if (nextNotes.length === state.notes.length) {
+          return;
+        }
+
+        state.notes = nextNotes;
+        render();
+        setStatus("Note deleted.");
+        return;
+      }
+    });
+
+    todoList.addEventListener("click", (event) => {
+      const toggleButton = event.target.closest("[data-todo-toggle]");
+      const deleteButton = event.target.closest("[data-todo-delete]");
+      const editTarget = event.target.closest("[data-todo-edit]");
+      if (!toggleButton && !deleteButton) {
+        if (editTarget) {
+          startEditing("todo", editTarget.dataset.todoEdit);
+        }
+        return;
+      }
+
+      if (deleteButton) {
+        if (editing) {
+          commitEditing();
+        }
+
+        const todoId = deleteButton.dataset.todoDelete;
+        const nextTodos = state.todos.filter((item) => item.id !== todoId);
+        if (nextTodos.length === state.todos.length) {
+          return;
+        }
+
+        state.todos = nextTodos;
+        render();
+        setStatus("Task deleted.");
+        return;
+      }
+
+      const todo = state.todos.find((item) => item.id === toggleButton.dataset.todoToggle);
+      if (!todo) {
+        return;
+      }
+
+      todo.done = !todo.done;
+      setStatus(todo.done ? "Task completed." : "Task reopened.");
+      render();
+    });
+
+    function handleEditorInput(event) {
+      const target = event.target;
+      if (!target.classList.contains("entry-editor") || !editing) {
+        return;
+      }
+
+      editing.draft = target.value;
+      target.style.height = "auto";
+      target.style.height = `${target.scrollHeight}px`;
+    }
+
+    function handleEditorKeydown(event) {
+      const target = event.target;
+      if (!target.classList.contains("entry-editor")) {
+        return;
+      }
+
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        commitEditing();
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelEditing();
+      }
+    }
+
+    function handleEditorFocusOut(event) {
+      const target = event.target;
+      if (!target.classList.contains("entry-editor")) {
+        return;
+      }
+
+      setTimeout(() => {
+        const active = document.activeElement;
+        if (active && active.classList?.contains("entry-editor")) {
+          return;
+        }
+        if (editing) {
+          commitEditing();
+        }
+      }, 0);
+    }
+
+    notesList.addEventListener("input", handleEditorInput);
+    notesList.addEventListener("keydown", handleEditorKeydown);
+    notesList.addEventListener("focusout", handleEditorFocusOut);
+    todoList.addEventListener("input", handleEditorInput);
+    todoList.addEventListener("keydown", handleEditorKeydown);
+    todoList.addEventListener("focusout", handleEditorFocusOut);
+
+    render();
+  </script>
+</body>
+</html>
