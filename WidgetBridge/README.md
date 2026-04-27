@@ -7,7 +7,7 @@ A shared local Go tray app that exposes Windows actions to multiple web widgets 
 From source for development:
 
 ```powershell
-cd C:\Users\filip\Programming\XeneonWidgets\WidgetBridge
+cd WidgetBridge
 go run .
 ```
 
@@ -16,31 +16,15 @@ go run .
 To build the tray-only executable without a terminal window:
 
 ```powershell
-cd C:\Users\filip\Programming\XeneonWidgets\WidgetBridge
+cd WidgetBridge
 .\build.ps1
 ```
-
-To build the installer executable:
-
-```powershell
-cd C:\Users\filip\Programming\XeneonWidgets\WidgetBridge
-.\build-installer.ps1
-```
-
-`build-installer.ps1` now builds only the installer executable.
 
 Or use the built executable:
 
 ```powershell
-cd C:\Users\filip\Programming\XeneonWidgets\WidgetBridge
+cd WidgetBridge
 .\widgetbridge.exe
-```
-
-Or install it into `C:\Program Files\WidgetBridge` with startup enabled:
-
-```powershell
-cd C:\Users\filip\Programming\XeneonWidgets\WidgetBridge
-.\widgetbridge-installer.exe
 ```
 
 When started from the built executable, WidgetBridge stays in the Windows tray and does not need a visible terminal window.
@@ -55,27 +39,11 @@ Tray menu:
 To stop the currently running tray instance from the command line:
 
 ```powershell
-cd C:\Users\filip\Programming\XeneonWidgets\WidgetBridge
+cd WidgetBridge
 .\widgetbridge.exe --stop
 ```
 
 The server listens by default on `http://127.0.0.1:39291`.
-
-The installer behavior is:
-
-- requests administrator rights because it writes into `Program Files`
-- if `widgetbridge.exe` is missing next to the installer, it tries to build it automatically from the local `WidgetBridge` source folder
-- copies `widgetbridge.exe` into `C:\Program Files\WidgetBridge`
-- registers autostart for the current Windows user
-- launches the installed bridge immediately after setup
-
-The simplest flow is now:
-
-```powershell
-cd C:\Users\filip\Programming\XeneonWidgets\WidgetBridge
-.\build-installer.ps1
-.\widgetbridge-installer.exe
-```
 
 Why the terminal could still appear before this change:
 

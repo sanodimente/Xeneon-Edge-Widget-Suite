@@ -4,7 +4,7 @@
 
 ## Using It In Corsair iCUE Xeneon Edge
 
-1. Open [power_pad.html](c:/Users/filip/Programming/XeneonWidgets/PowerPad/power_pad.html) in a text editor.
+1. Open `PowerPad/power_pad.html` in a text editor.
 2. Copy the full file contents.
 3. Open the iframe widget inside the Corsair iCUE app for Xeneon Edge.
 4. Paste the copied HTML into the widget content field.

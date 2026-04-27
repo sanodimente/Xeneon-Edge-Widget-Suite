@@ -10,6 +10,8 @@ The goal of this repository is to keep widget UI code and Windows-side integrati
   Contains the Power Pad widget HTML and widget-specific documentation.
 - `NetPulse/`
   Contains the Net Pulse network monitor widget HTML and widget-specific documentation.
+- `Notes/`
+  Contains the standalone Notes and Todo widget HTML and widget-specific documentation.
 - `WidgetBridge/`
   Contains the local Go tray bridge that exposes Windows power and utility actions over HTTP.
 
@@ -19,6 +21,7 @@ This repository is currently in a working early version.
 
 - The Power Pad widget is implemented and documented.
 - The Net Pulse widget is implemented and documented.
+- The Notes widget is implemented and documented.
 - The widget is meant to be pasted into the iframe widget inside Corsair iCUE for Xeneon Edge.
 - The shared WidgetBridge is implemented in Go and runs locally on Windows as a tray app.
 - The bridge currently supports lock, sleep, restart, shutdown, Task Manager, and Power Settings actions.
@@ -30,10 +33,11 @@ This repository is currently in a working early version.
 ## How It Works
 
 1. A widget HTML file is authored in this repository.
-2. The widget calls the local bridge at `http://127.0.0.1:39291`.
-3. The Go bridge receives those requests and launches the corresponding Windows actions.
-4. Multiple widgets can reuse the same local bridge process.
-5. The tray menu can temporarily disable the bridge or exit it completely.
+2. Widgets that need native Windows actions or telemetry call the local bridge at `http://127.0.0.1:39291`.
+3. Standalone widgets can keep all state in the browser and run without the bridge.
+4. The Go bridge receives widget requests and launches the corresponding Windows actions.
+5. Multiple widgets can reuse the same local bridge process.
+6. The tray menu can temporarily disable the bridge or exit it completely.
 
 ## Current Components
 
@@ -64,6 +68,20 @@ Current behavior:
 
 See `NetPulse/README.md` for widget-specific usage instructions.
 
+### Notes
+
+Notes is a standalone two-page widget for quick notes and todo items.
+
+Current behavior:
+
+- Switches between Notes and Todo views.
+- Saves content locally in the browser with `localStorage`.
+- Supports inline add and edit for both notes and tasks.
+- Supports per-item delete and clear-all actions.
+- Lets Todo items be marked done or reopened.
+
+See `Notes/README.md` for widget-specific usage instructions.
+
 ### WidgetBridge
 
 WidgetBridge is the shared local tray service used by widgets in this repository.
@@ -76,6 +94,7 @@ Current behavior:
 - Uses a single local HTTP address by default: `127.0.0.1:39291`.
 - Can be stopped with `widgetbridge.exe --stop`.
 - Shows bridge state and available widgets in the Windows tray.
+- Builds a tray-ready Windows executable with `WidgetBridge/build.ps1`.
 
 See `WidgetBridge/README.md` for bridge-specific details.
 
@@ -84,41 +103,23 @@ See `WidgetBridge/README.md` for bridge-specific details.
 ### 1. Start the bridge
 
 ```powershell
-cd C:\Users\filip\Programming\XeneonWidgets\WidgetBridge
+cd WidgetBridge
 go run .
 ```
 
 For a terminal-free tray executable on Windows, build it with:
 
 ```powershell
-cd C:\Users\filip\Programming\XeneonWidgets\WidgetBridge
+cd WidgetBridge
 .\build.ps1
 ```
-
-To build the installer that places WidgetBridge in `C:\Program Files\WidgetBridge` and enables startup:
-
-```powershell
-cd C:\Users\filip\Programming\XeneonWidgets\WidgetBridge
-.\build-installer.ps1
-```
-
-That script builds only `widgetbridge-installer.exe`.
 
 Or run the built executable:
 
 ```powershell
-cd C:\Users\filip\Programming\XeneonWidgets\WidgetBridge
+cd WidgetBridge
 .\widgetbridge.exe
 ```
-
-Or run the installer executable:
-
-```powershell
-cd C:\Users\filip\Programming\XeneonWidgets\WidgetBridge
-.\widgetbridge-installer.exe
-```
-
-If `widgetbridge.exe` is not already present in the `WidgetBridge` folder, the installer now tries to build it automatically before installing.
 
 The built executable appears as a tray icon without opening a console window. From there you can disable the bridge, inspect the currently available widgets, or fully exit it.
 
@@ -128,6 +129,8 @@ Open `PowerPad/power_pad.html`, copy the full file content, and paste it into th
 
 You can repeat the same flow with `NetPulse/net_pulse.html` for the network monitor widget.
 
+For a standalone widget with no bridge dependency, use `Notes/notes.html` the same way.
+
 ## Repository Layout
 
 ```text
@@ -135,10 +138,14 @@ XeneonWidgets/
   NetPulse/
     net_pulse.html
     README.md
+  Notes/
+    notes.html
+    README.md
   PowerPad/
     power_pad.html
     README.md
   WidgetBridge/
+    build.ps1
     go.mod
     main.go
     README.md
