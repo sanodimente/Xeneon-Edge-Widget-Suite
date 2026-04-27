@@ -4,6 +4,25 @@ Xeneon Edge Widget Suite is a small collection of custom web widgets and a share
 
 The goal of this repository is to keep widget UI code and Windows-side integration in one place, so new widgets can reuse the same local service instead of each widget needing its own native integration layer.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <strong>Power Pad</strong><br>
+      <img src="screenshots/power_pad.png" alt="Power Pad screenshot" width="100%">
+    </td>
+    <td width="33%" valign="top">
+      <strong>Net Pulse</strong><br>
+      <img src="screenshots/netpulse.png" alt="Net Pulse screenshot" width="100%">
+    </td>
+    <td width="33%" valign="top">
+      <strong>Notes</strong><br>
+      <img src="screenshots/notes.png" alt="Notes screenshot" width="100%">
+    </td>
+  </tr>
+</table>
+
 ## What Is In This Repository
 
 - `PowerPad/`
